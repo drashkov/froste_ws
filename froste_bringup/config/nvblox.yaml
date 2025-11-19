@@ -1,0 +1,32 @@
+/**:
+  ros__parameters:
+    global_frame: map
+    # MAPPING PARAMETERS
+    voxel_size: 0.05
+    esdf_update_rate_hz: 2.0
+    mesh_update_rate_hz: 5.0
+    tsdf_integrator_max_integration_distance_m: 5.0
+    tsdf_integrator_truncation_distance_m: 0.2
+
+
+    # DISABLE THIS TO STOP LOG SPAM/LAG
+    clear_map_outside_radius_rate_hz: 0.0 
+    map_clearing_radius_m: 5.0
+
+    max_block_count: 10000
+
+    
+    # MAPPING MODE (STATIC)
+    # We set decay to 0.0 for Milestone 1 (Static Map Building)
+    tsdf_decay_factor: 0.95
+    decay_tsdf_rate_hz: 0.0 
+    
+    # INPUT TOPICS
+    # These must match your remappings in the launch file
+    use_depth: true
+    use_lidar: false
+    use_color: false
+    
+    # SAVING
+    # This handles the automatic map save on shutdown
+    after_shutdown_map_save_path: "/workspaces/isaac_ros-dev/src/froste_ws/maps/slushe_map"
