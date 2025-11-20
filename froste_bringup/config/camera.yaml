@@ -1,0 +1,27 @@
+/oak:
+  ros__parameters:
+    camera:
+      i_pipeline_type: RGBStereo
+      i_nn_type: none
+      i_enable_imu: true
+      i_enable_ir: true
+      i_laser_dot_brightness: 800
+      i_usb_speed: SUPER
+
+    left:
+      i_publish_topic: true
+      i_resolution: 400P
+      i_publish_rect: true    # Keep True to keep depth engine happy
+
+    right:
+      i_publish_topic: true
+      i_resolution: 400P
+      i_publish_rect: true
+
+    stereo:
+      i_align_depth: true
+      i_publish_topic: true
+      i_subpixel: false
+      i_set_input_size: true
+      i_input_width: 640
+      i_input_height: 400

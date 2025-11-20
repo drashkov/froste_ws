@@ -9,19 +9,21 @@ import os
 def generate_launch_description():
     
     # 1. OAK-D Driver
+    camera_conf = os.path.join(
+        get_package_share_directory('froste_bringup'),
+        'config',
+        'camera.yaml'
+    )
+
     depthai_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             os.path.join(get_package_share_directory('depthai_ros_driver'), 'launch'),
             '/camera.launch.py'
         ]),
-        launch_arguments={
-            'pointcloud.enable': 'false',
-            'imu.enable': 'true'
-        }.items()
+        launch_arguments={'params_file': camera_conf}.items()
     )
 
     # 2. Visual SLAM (The Brain)
-    # We configure it, but we don't trust it to publish TFs yet.
     visual_slam_container = ComposableNodeContainer(
         name='visual_slam_launch_container',
         namespace='',
@@ -33,22 +35,23 @@ def generate_launch_description():
                 package='isaac_ros_visual_slam',
                 plugin='nvidia::isaac_ros::visual_slam::VisualSlamNode',
                 remappings=[
-                    ('/stereo_camera/left/image', '/oak/left/image_raw'),
-                    ('/stereo_camera/right/image', '/oak/right/image_raw'),
-                    ('/stereo_camera/left/camera_info', '/oak/left/camera_info'),
-                    ('/stereo_camera/right/camera_info', '/oak/right/camera_info'),
-                    ('/visual_slam/imu', '/oak/imu/data')
+                    # VSLAM gets RAW images (Proven to work for tracking)
+                    ('visual_slam/image_0', '/oak/left/image_raw'),
+                    ('visual_slam/camera_info_0', '/oak/left/camera_info'),
+                    ('visual_slam/image_1', '/oak/right/image_raw'),
+                    ('visual_slam/camera_info_1', '/oak/right/camera_info'),
+                    ('visual_slam/imu', '/oak/imu/data')
                 ],
                 parameters=[{
                     'enable_rectified_pose': True,
                     'denoise_input_images': False,
-                    'rectified_images': True,
+                    'rectified_images': False,   # Essential: We are feeding raw images
                     'base_frame': 'base_link',
                     'odom_frame': 'odom',
                     'map_frame': 'map',
                     'enable_debug_mode': False,
                     'publish_odom_to_base_tf': True,
-                    'publish_map_to_odom_tf': False, # DISABLE VSLAM MAP TF (We provide it manually below)
+                    'publish_map_to_odom_tf': True,
                     'invert_odom_to_base_tf': False
                 }]
             )
@@ -57,6 +60,7 @@ def generate_launch_description():
     )
 
     # 3. Nvblox (The Mapper)
+    # Configured to listen to /oak/stereo/image_raw in its own launch file
     nvblox_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([
             os.path.join(get_package_share_directory('froste_bringup'), 'launch'),
@@ -69,16 +73,7 @@ def generate_launch_description():
         }.items()
     )
 
-    # 4. RVIZ
-    rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        arguments=['-d', os.path.join(get_package_share_directory('isaac_ros_visual_slam'), 'rviz', 'default.cfg.rviz')]
-    )
-
-    # --- STATIC TRANSFORMS (The "Skeleton") ---
-    # TF 1: Camera -> Robot (Mounting Point)
+    # 4. Static Transforms
     camera_tf_node = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -86,30 +81,19 @@ def generate_launch_description():
         arguments=['0', '0', '0', '0', '0', '0', 'base_link', 'oak-d-base-frame']
     )
 
-    # TF 2: Map -> Odom (Global Anchor)
     map_tf_node = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         name='map_to_odom',
         arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom']
     )
-
-    # TF 3: Odom -> Base_Link (THE PIN)
-    # This forces the robot to exist at (0,0,0).
-    # We use this because VSLAM is currently failing to publish it.
-    odom_tf_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name='odom_to_base',
-        arguments=['0', '0', '0', '0', '0', '0', 'odom', 'base_link']
-    )
+    
+    # NOTE: odom_tf_node is REMOVED so VSLAM can drive the robot
 
     return LaunchDescription([
         camera_tf_node,
         map_tf_node,
-        odom_tf_node,      # <--- ADD THIS
         depthai_launch,
         visual_slam_container,
-        nvblox_launch,
-        rviz_node
+        nvblox_launch
     ])
