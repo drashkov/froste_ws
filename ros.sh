@@ -20,7 +20,16 @@ if [ -z "$(docker ps -a -q -f "name=${CONTAINER_NAME}")" ]; then
     echo "--- Container '${CONTAINER_NAME}' not found. ---"
     echo "--- Running one-time setup... ---"
 
-docker run -it --name ${CONTAINER_NAME} -v ${HOST_WS_DIR}:/home/ws/ugv_ws -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /dev/bus/usb:/dev/bus/usb --device-cgroup-rule='c 189:* rmw' --network=host --privileged ${IMAGE_NAME} /bin/bash
+docker run -it --name ${CONTAINER_NAME} \
+  -v ${HOST_WS_DIR}:/home/ws/ugv_ws \
+  -v /dev/input:/dev/input \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -v /dev/bus/usb:/dev/bus/usb \
+  --device-cgroup-rule='c 189:* rmw' \
+  --network=host \
+  --privileged \
+  ${IMAGE_NAME} /bin/bash
 
     echo "--- One-time setup complete. ---"
     echo "--- YOU MUST NOW RE-RUN YOUR SOFTWARE SETUP ---"

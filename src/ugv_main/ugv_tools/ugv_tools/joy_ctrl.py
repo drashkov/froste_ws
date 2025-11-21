@@ -15,7 +15,8 @@ from std_msgs.msg import Int32, Bool
 import pygame
 
 def get_joystick_names():
-    pygame.init()
+    # Only initialize joystick subsystem to avoid audio errors in Docker
+    os.environ['SDL_AUDIODRIVER'] = 'dummy'
     pygame.joystick.init()
 
     joystick_names = []
@@ -29,7 +30,7 @@ def get_joystick_names():
             joystick.init()
             joystick_names.append(joystick.get_name())
 
-    pygame.quit()
+    pygame.joystick.quit()
     return joystick_names
     
 class JoyTeleop(Node):
@@ -50,20 +51,39 @@ class JoyTeleop(Node):
 		#declare parameter and get the value
 		self.declare_parameter('xspeed_limit',0.5)
 		self.declare_parameter('yspeed_limit',0.5)
-		self.declare_parameter('angular_speed_limit',1.0)
+		self.declare_parameter('angular_speed_limit',2.0)  # Increased for faster turning
+		self.declare_parameter('invert_controls', False)  # Set to True if motor controller boots in reverse
 		self.xspeed_limit = self.get_parameter('xspeed_limit').get_parameter_value().double_value
 		self.yspeed_limit = self.get_parameter('yspeed_limit').get_parameter_value().double_value
 		self.angular_speed_limit = self.get_parameter('angular_speed_limit').get_parameter_value().double_value
+		self.invert_controls = self.get_parameter('invert_controls').get_parameter_value().bool_value
+		
+		self.get_logger().info(f"Controls inverted: {self.invert_controls}")
 		joysticks = get_joystick_names()
 		self.joysticks = joysticks[0] if len(joysticks) != 0 else "no"
+		
+		print(f"[DEBUG] Detected joystick: '{self.joysticks}'")
+		
 		self.switch_dict = {
 			"Xbox 360 Controller": [9,10,3],
+			"Xbox One S Controller": [9,10,2],  # Axis 2 for right stick horizontal (turning)
 			"SHANWAN Android Gamepad": [13,14,2],
 		}
+		
+		if self.joysticks in self.switch_dict:
+			print(f"[DEBUG] ✓ Button mapping found for '{self.joysticks}'")
+		else:
+			print(f"[DEBUG] ❌ NO button mapping for '{self.joysticks}'!")
+			print(f"[DEBUG] Available mappings: {list(self.switch_dict.keys())}")
+			print(f"[DEBUG] You need to add a mapping for this controller")
 
 	def buttonCallback(self,joy_data):
-		print(joy_data)
-		if not isinstance(joy_data, Joy): return
+		print(f"[DEBUG] buttonCallback triggered")
+		print(f"[DEBUG] Joy data: {joy_data}")
+		if not isinstance(joy_data, Joy):
+			print(f"[DEBUG] ❌ Received non-Joy message type: {type(joy_data)}")
+			return
+		print(f"[DEBUG] User: {self.user_name}")
 		if self.user_name == "root": self.user_jetson(joy_data)
 		else: self.user_pc(joy_data)
     
@@ -79,10 +99,23 @@ class JoyTeleop(Node):
 			elif self.angular_Gear == 1.0 / 4: self.angular_Gear = 1.0 / 2
 			elif self.angular_Gear == 1.0 / 2: self.angular_Gear = 3.0 / 4
 			elif self.angular_Gear == 3.0 / 4: self.angular_Gear = 1.0
-		xlinear_speed = self.filter_data(joy_data.axes[1]) * self.xspeed_limit * self.linear_Gear
-			#ylinear_speed = self.filter_data(joy_data.axes[2]) * self.yspeed_limit * self.linear_Gear
-		ylinear_speed = self.filter_data(joy_data.axes[0]) * self.yspeed_limit * self.linear_Gear
-		angular_speed = self.filter_data(joy_data.axes[self.switch_dict[self.joysticks][2]]) * self.angular_speed_limit * self.angular_Gear
+		
+		# Debug: Show button presses to find B button
+		#self.get_logger().info(f"Axes: {[f'{i}:{v:.2f}' for i, v in enumerate(joy_data.axes)]}")
+		#if any(joy_data.buttons):
+		#	self.get_logger().info(f"Buttons: {[f'{i}:{v}' for i, v in enumerate(joy_data.buttons) if v == 1]}")
+		
+		# Two-stick controls: left stick forward/back, right stick turning
+		xlinear_speed = self.filter_data(joy_data.axes[1]) * self.xspeed_limit * self.linear_Gear  # Left stick up/down
+		ylinear_speed = 0.0  # No strafe on this robot
+		angular_speed = self.filter_data(joy_data.axes[2]) * self.angular_speed_limit * self.angular_Gear  # Right stick left/right
+		
+		# Apply inversion if needed (for motor controller bug)
+		if self.invert_controls:
+			xlinear_speed = -xlinear_speed
+			ylinear_speed = -ylinear_speed
+			angular_speed = -angular_speed
+		
 		if xlinear_speed > self.xspeed_limit: xlinear_speed = self.xspeed_limit
 		elif xlinear_speed < -self.xspeed_limit: xlinear_speed = -self.xspeed_limit
 		if ylinear_speed > self.yspeed_limit: ylinear_speed = self.yspeed_limit

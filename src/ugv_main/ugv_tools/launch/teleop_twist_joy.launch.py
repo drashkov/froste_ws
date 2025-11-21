@@ -14,6 +14,12 @@ from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 def generate_launch_description():
+    # Declare launch argument for inverting controls
+    invert_controls_arg = DeclareLaunchArgument(
+        'invert_controls',
+        default_value='false',
+        description='Invert forward/backward and left/right controls (for motor controller bug)'
+    )
                                    
     # Create a node to read joystick input
     joy_node = Node(
@@ -25,10 +31,14 @@ def generate_launch_description():
     joy_ctrl_node = Node(
         package='ugv_tools',
         executable='joy_ctrl',
+        parameters=[{
+            'invert_controls': LaunchConfiguration('invert_controls')
+        }]
     )
 
     # Return the launch description
     return LaunchDescription([
+        invert_controls_arg,
         joy_node,
         joy_ctrl_node
     ])
