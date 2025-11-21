@@ -43,7 +43,7 @@ def generate_launch_description():
             'queue_size': queue_size,
             "subscribe_rgb": True,
             "subscribe_depth": True,
-            'subscribe_scan': True,
+            'subscribe_scan': False,
             "subscribe_odom_info": False,
             "approx_sync": True,
             "Rtabmap/DetectionRate": "3.5",
@@ -56,14 +56,7 @@ def generate_launch_description():
     ]
     
     # Launch the lidar bringup launch file
-    bringup_lidar_launch = IncludeLaunchDescription(PythonLaunchDescriptionSource(
-        [os.path.join(get_package_share_directory('ugv_bringup'), 'launch'),
-         '/bringup_lidar.launch.py']),
-        launch_arguments={
-            'use_rviz': LaunchConfiguration('use_rviz'),
-            'rviz_config': 'slam_3d',
-        }.items()
-    )
+
         
     # Launch the oak lite bringup launch file
     bringup_oak_lite_launch = IncludeLaunchDescription( PythonLaunchDescriptionSource(
@@ -112,7 +105,7 @@ def generate_launch_description():
         declare_queue_size,
         declare_qos,
         declare_localization,
-        bringup_lidar_launch,
+
         bringup_oak_lite_launch,
         robot_pose_publisher_launch,
         rtabmap_slam_node_slam,

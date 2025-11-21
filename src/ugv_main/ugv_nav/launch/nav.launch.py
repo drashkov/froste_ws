@@ -54,13 +54,7 @@ def launch_setup(context, *args, **kwargs):
     # Get the emcl param file
     emcl_param_file = os.path.join(emcl_dir, 'config', 'emcl2_quick_start.param.yaml')                        
     # Include the bringup_lidar launch description
-    bringup_lidar_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(get_package_share_directory('ugv_bringup'), 'launch', 'bringup_lidar.launch.py')),
-        launch_arguments={
-            'use_rviz': LaunchConfiguration('use_rviz'),
-            'rviz_config': 'nav_2d', 
-        }.items()
-    )
+
 
     # Include the nav2_bringup_amcl launch description if use_localization is amcl
     nav2_bringup_amcl_launch = IncludeLaunchDescription(
@@ -108,7 +102,7 @@ def launch_setup(context, *args, **kwargs):
     
     # Return the list of launch descriptions
     return [
-        bringup_lidar_launch,
+
         nav2_bringup_amcl_launch,
         nav2_bringup_emcl_launch,
         emcl_launch,
