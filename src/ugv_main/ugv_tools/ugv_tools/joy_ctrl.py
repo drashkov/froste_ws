@@ -49,8 +49,8 @@ class JoyTeleop(Node):
 		self.sub_Joy = self.create_subscription(Joy,'joy', self.buttonCallback,10)
 		
 		#declare parameter and get the value
-		self.declare_parameter('xspeed_limit',0.5)
-		self.declare_parameter('yspeed_limit',0.5)
+		self.declare_parameter('xspeed_limit',0.3)
+		self.declare_parameter('yspeed_limit',0.3)
 		self.declare_parameter('angular_speed_limit',2.0)  # Increased for faster turning
 		self.declare_parameter('invert_controls', False)  # Set to True if motor controller boots in reverse
 		self.xspeed_limit = self.get_parameter('xspeed_limit').get_parameter_value().double_value

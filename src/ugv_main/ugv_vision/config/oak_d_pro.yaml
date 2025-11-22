@@ -1,0 +1,12 @@
+/oak:
+  ros__parameters:
+    camera:
+      i_enable_imu: true   # Enable IMU for sensor fusion
+      i_enable_ir: true    # Enable IR projector for active stereo
+      i_nn_type: none      # No neural network
+    stereo:
+      i_subpixel: true     # Subpixel stereo matching for better depth accuracy
+    ir:
+      i_dot_projection_mA: 800  # IR dot projector brightness (essential for white walls!)
+      i_flood_light_mA: 0       # Disable flood light to save power
+
